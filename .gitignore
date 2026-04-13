@@ -5,3 +5,4 @@ __pycache__/
 .Lib/
 .Scripts/
 .idea/
+.pytest_cache/
