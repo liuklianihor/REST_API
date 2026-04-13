@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BookStatus(str, Enum):
@@ -22,4 +24,6 @@ class BookCreate(BookBase):
 
 
 class Book(BookBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID

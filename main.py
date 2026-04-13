@@ -1,16 +1,19 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
 from app.api.books import router as books_router
+from app.core.database import Base, engine
+from app.models import book_model
 
 
-def build_app() -> FastAPI:
-    app = FastAPI(title="Library API")
-    app.include_router(books_router)
-
-    @app.get("/")
-    async def healthcheck():
-        return {"message": "Library API is running"}
-
-    return app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
 
 
-app = build_app()
+app = FastAPI(title="Library API", lifespan=lifespan)
+app.include_router(books_router)

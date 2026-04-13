@@ -1,27 +1,43 @@
-from uuid import uuid4
-from app.repository.book_repository import (
-    add_book,
-    delete_book as remove_book_record,
-    get_all_books,
-    get_book_by_id,
-)
+from __future__ import annotations
+
+from typing import Optional
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from app.repository.book_repository import create_book as repo_create_book
+from app.repository.book_repository import delete_book as repo_delete_book
+from app.repository.book_repository import get_book_by_id as repo_get_book_by_id
+from app.repository.book_repository import list_books as repo_list_books
+from app.schemas.book_schema import BookCreate, BookStatus
 
 
-async def list_books():
-    return await get_all_books()
+def list_books(
+    db: Session,
+    *,
+    limit: int,
+    offset: int,
+    author: Optional[str] = None,
+    status: Optional[BookStatus] = None,
+    sort_by: Optional[str] = None,
+):
+    return repo_list_books(
+        db,
+        limit=limit,
+        offset=offset,
+        author=author,
+        status=status,
+        sort_by=sort_by,
+    )
 
 
-async def fetch_book(book_id):
-    return await get_book_by_id(book_id)
+def fetch_book(db: Session, book_id: UUID):
+    return repo_get_book_by_id(db, book_id)
 
 
-async def persist_book(book_data):
-    payload = book_data.model_dump()
-    payload["id"] = uuid4()
-
-    await add_book(payload)
-    return payload
+def persist_book(db: Session, book_data: BookCreate):
+    return repo_create_book(db, book_data)
 
 
-async def erase_book(book_id):
-    return await remove_book_record(book_id)
+def erase_book(db: Session, book_id: UUID):
+    return repo_delete_book(db, book_id)

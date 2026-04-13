@@ -1,34 +1,59 @@
-from app.models.book_model import books_db
+from __future__ import annotations
+
+from typing import Optional
+
+from sqlalchemy import asc, desc, select
+from sqlalchemy.orm import Session
+
+from app.models.book_model import Book
+from app.schemas.book_schema import BookCreate, BookStatus
 
 
-def _find_index(book_id):
-    target = str(book_id)
-    for index, item in enumerate(books_db):
-        if str(item["id"]) == target:
-            return index
-    return None
+def list_books(
+    db: Session,
+    *,
+    limit: int,
+    offset: int,
+    author: Optional[str] = None,
+    status: Optional[BookStatus] = None,
+    sort_by: Optional[str] = None,
+):
+    query = select(Book)
+
+    if author:
+        query = query.where(Book.author == author)
+
+    if status:
+        query = query.where(Book.status == status.value)
+
+    if sort_by == "title":
+        query = query.order_by(asc(Book.title))
+    elif sort_by == "year":
+        query = query.order_by(asc(Book.year))
+    else:
+        query = query.order_by(asc(Book.id))
+
+    query = query.offset(offset).limit(limit)
+    return db.execute(query).scalars().all()
 
 
-async def get_all_books():
-    return list(books_db)
+def get_book_by_id(db: Session, book_id):
+    return db.get(Book, book_id)
 
 
-async def get_book_by_id(book_id):
-    index = _find_index(book_id)
-    if index is None:
-        return None
-    return books_db[index]
-
-
-async def add_book(book):
-    books_db.append(book)
+def create_book(db: Session, book_data: BookCreate):
+    book = Book(**book_data.model_dump())
+    db.add(book)
+    db.commit()
+    db.refresh(book)
     return book
 
 
-async def delete_book(book_id):
-    index = _find_index(book_id)
-    if index is None:
+def delete_book(db: Session, book_id):
+    book = db.get(Book, book_id)
+    if book is None:
         return False
 
-    del books_db[index]
+    db.delete(book)
+    db.commit()
     return True
