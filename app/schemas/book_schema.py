@@ -25,5 +25,10 @@ class BookCreate(BookBase):
 
 class Book(BookBase):
     model_config = ConfigDict(from_attributes=True)
-
     id: UUID
+
+
+class BookPage(BaseModel):
+    items: list[Book]
+    next_cursor: str | None = None
+    has_more: bool = False

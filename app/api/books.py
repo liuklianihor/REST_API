@@ -7,29 +7,32 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.book_schema import Book, BookCreate, BookStatus
+from app.schemas.book_schema import Book, BookCreate, BookPage, BookStatus
 from app.services.book_service import erase_book, fetch_book, list_books, persist_book
 
 router = APIRouter(prefix="/books", tags=["Books"])
 
 
-@router.get("/", response_model=list[Book])
+@router.get("/", response_model=BookPage)
 def read_books(
     author: Optional[str] = Query(default=None),
     status: Optional[BookStatus] = Query(default=None),
     sort_by: Optional[str] = Query(default=None, pattern="^(title|year)$"),
     limit: int = Query(default=10, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    cursor: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    return list_books(
-        db,
-        limit=limit,
-        offset=offset,
-        author=author,
-        status=status,
-        sort_by=sort_by,
-    )
+    try:
+        return list_books(
+            db,
+            limit=limit,
+            cursor=cursor,
+            author=author,
+            status=status,
+            sort_by=sort_by,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/{book_id}", response_model=Book)
