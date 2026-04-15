@@ -1,29 +1,40 @@
 from __future__ import annotations
 
-from typing import Optional
-from uuid import UUID
+from pydantic_mongo import PydanticObjectId
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from motor.motor_asyncio import AsyncIOMotorCollection
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-
-from app.core.database import get_db
-from app.schemas.book_schema import Book, BookCreate, BookStatus
-from app.services.book_service import erase_book, fetch_book, list_books, persist_book
+from app.core.database import get_book_collection
+from app.models.book_model import BookDocument
+from app.repository.book_repository import MongoBookRepository
+from app.schemas.book_schema import BookCreate, BookRead, BookStatus
+from app.services.book_service import BookService
 
 router = APIRouter(prefix="/books", tags=["Books"])
 
 
-@router.get("/", response_model=list[Book])
-def read_books(
-    author: Optional[str] = Query(default=None),
-    status: Optional[BookStatus] = Query(default=None),
-    sort_by: Optional[str] = Query(default=None, pattern="^(title|year)$"),
+def get_book_repository(
+    collection: AsyncIOMotorCollection = Depends(get_book_collection),
+) -> MongoBookRepository:
+    return MongoBookRepository(collection)
+
+
+def get_book_service(
+    repository: MongoBookRepository = Depends(get_book_repository),
+) -> BookService:
+    return BookService(repository)
+
+
+@router.get("", response_model=list[BookRead])
+async def read_books(
+    author: str | None = Query(default=None),
+    status: BookStatus | None = Query(default=None),
+    sort_by: str | None = Query(default=None, pattern="^(title|year)$"),
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    service: BookService = Depends(get_book_service),
 ):
-    return list_books(
-        db,
+    return await service.list_books(
         limit=limit,
         offset=offset,
         author=author,
@@ -32,20 +43,29 @@ def read_books(
     )
 
 
-@router.get("/{book_id}", response_model=Book)
-def read_book(book_id: UUID, db: Session = Depends(get_db)):
-    book = fetch_book(db, book_id)
+@router.get("/{book_id}", response_model=BookRead)
+async def read_book(
+    book_id: PydanticObjectId,
+    service: BookService = Depends(get_book_service),
+):
+    book = await service.get_book(book_id)
     if book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
     return book
 
 
-@router.post("/", response_model=Book, status_code=201)
-def create_book(book: BookCreate, db: Session = Depends(get_db)):
-    return persist_book(db, book)
+@router.post("", response_model=BookRead, status_code=status.HTTP_201_CREATED)
+async def create_book(
+    book: BookCreate,
+    service: BookService = Depends(get_book_service),
+):
+    return await service.create_book(book)
 
 
-@router.delete("/{book_id}", status_code=204)
-def remove_book(book_id: UUID, db: Session = Depends(get_db)):
-    erase_book(db, book_id)
-    return None
+@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_book(
+    book_id: PydanticObjectId,
+    service: BookService = Depends(get_book_service),
+):
+    await service.delete_book(book_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

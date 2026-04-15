@@ -1,43 +1,38 @@
 from __future__ import annotations
 
-from typing import Optional
-from uuid import UUID
+from pydantic_mongo import PydanticObjectId
 
-from sqlalchemy.orm import Session
-
-from app.repository.book_repository import create_book as repo_create_book
-from app.repository.book_repository import delete_book as repo_delete_book
-from app.repository.book_repository import get_book_by_id as repo_get_book_by_id
-from app.repository.book_repository import list_books as repo_list_books
+from app.models.book_model import BookDocument
+from app.repository.book_repository import MongoBookRepository
 from app.schemas.book_schema import BookCreate, BookStatus
 
 
-def list_books(
-    db: Session,
-    *,
-    limit: int,
-    offset: int,
-    author: Optional[str] = None,
-    status: Optional[BookStatus] = None,
-    sort_by: Optional[str] = None,
-):
-    return repo_list_books(
-        db,
-        limit=limit,
-        offset=offset,
-        author=author,
-        status=status,
-        sort_by=sort_by,
-    )
+class BookService:
+    def __init__(self, repository: MongoBookRepository):
+        self.repository = repository
 
+    async def list_books(
+        self,
+        *,
+        limit: int,
+        offset: int,
+        author: str | None = None,
+        status: BookStatus | None = None,
+        sort_by: str | None = None,
+    ) -> list[BookDocument]:
+        return await self.repository.list_books(
+            limit=limit,
+            offset=offset,
+            author=author,
+            status=status,
+            sort_by=sort_by,
+        )
 
-def fetch_book(db: Session, book_id: UUID):
-    return repo_get_book_by_id(db, book_id)
+    async def get_book(self, book_id: PydanticObjectId) -> BookDocument | None:
+        return await self.repository.get_book_by_id(book_id)
 
+    async def create_book(self, book_data: BookCreate) -> BookDocument:
+        return await self.repository.create_book(book_data)
 
-def persist_book(db: Session, book_data: BookCreate):
-    return repo_create_book(db, book_data)
-
-
-def erase_book(db: Session, book_id: UUID):
-    return repo_delete_book(db, book_id)
+    async def delete_book(self, book_id: PydanticObjectId) -> bool:
+        return await self.repository.delete_book(book_id)

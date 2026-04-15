@@ -1,34 +1,26 @@
 from __future__ import annotations
 
-import os
-from typing import Generator
+from fastapi import Depends, Request
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorDatabase
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from app.core.config import MONGODB_BOOKS_COLLECTION, MONGODB_DB, MONGODB_URI
 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./library.db")
-
-engine_kwargs = {"future": True}
-connect_args: dict[str, object] = {}
-
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-    if DATABASE_URL in {"sqlite://", "sqlite:///:memory:"}:
-        engine_kwargs["poolclass"] = StaticPool
-
-engine = create_engine(DATABASE_URL, connect_args=connect_args, **engine_kwargs)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+def create_mongo_client() -> AsyncIOMotorClient:
+    return AsyncIOMotorClient(MONGODB_URI)
 
 
-class Base(DeclarativeBase):
-    pass
+async def get_mongo_client(request: Request) -> AsyncIOMotorClient:
+    return request.app.state.mongo_client
 
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_database(
+    client: AsyncIOMotorClient = Depends(get_mongo_client),
+) -> AsyncIOMotorDatabase:
+    return client[MONGODB_DB]
+
+
+def get_book_collection(
+    database: AsyncIOMotorDatabase = Depends(get_database),
+) -> AsyncIOMotorCollection:
+    return database[MONGODB_BOOKS_COLLECTION]

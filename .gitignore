@@ -1,8 +1,9 @@
-.venv/
 __pycache__/
 *.pyc
-.Include/
-.Lib/
-.Scripts/
-.idea/
 .pytest_cache/
+.venv/
+.env
+.idea/
+.vscode/
+*.db
+*.sqlite3

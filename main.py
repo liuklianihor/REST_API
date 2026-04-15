@@ -5,15 +5,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.books import router as books_router
-from app.core.database import Base, engine
-from app.models import book_model
+from app.core.database import create_mongo_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    app.state.mongo_client = create_mongo_client()
     yield
+    app.state.mongo_client.close()
 
 
 app = FastAPI(title="Library API", lifespan=lifespan)
+
 app.include_router(books_router)

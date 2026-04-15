@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_mongo import PydanticObjectId
 
 
 class BookStatus(str, Enum):
@@ -12,18 +12,18 @@ class BookStatus(str, Enum):
 
 
 class BookBase(BaseModel):
-    title: str = Field(min_length=1)
-    author: str = Field(min_length=1)
-    description: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=255)
+    author: str = Field(min_length=1, max_length=255)
+    description: str = Field(min_length=1, max_length=2000)
     status: BookStatus
-    year: int = Field(ge=0)
+    year: int = Field(ge=0, le=3000)
 
 
 class BookCreate(BookBase):
     pass
 
 
-class Book(BookBase):
-    model_config = ConfigDict(from_attributes=True)
+class BookRead(BookBase):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    id: UUID
+    id: PydanticObjectId

@@ -1,32 +1,39 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: library_db
+  mongo:
+    image: mongo:7
+    container_name: library_mongo
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: library
-      POSTGRES_USER: library_user
-      POSTGRES_PASSWORD: library_pass
+      MONGO_INITDB_ROOT_USERNAME: mongo_admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: library
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U library_user -d library"]
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --username mongo_admin --password password --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1",
+        ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   api:
     build: .
     container_name: library_api
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg2://library_user:library_pass@db:5432/library
+      MONGODB_URI: mongodb://mongo_admin:password@mongo:27017/?authSource=admin
+      MONGODB_DB: library
+      MONGODB_BOOKS_COLLECTION: books
     ports:
       - "8000:8000"
     depends_on:
-      db:
+      mongo:
         condition: service_healthy
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
 
 volumes:
-  postgres_data:
+  mongo_data:
