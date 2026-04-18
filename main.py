@@ -1,20 +1,6 @@
-from __future__ import annotations
+from app import create_app
 
-from contextlib import asynccontextmanager
+app = create_app()
 
-from fastapi import FastAPI
-
-from app.api.books import router as books_router
-from app.core.database import create_mongo_client
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.mongo_client = create_mongo_client()
-    yield
-    app.state.mongo_client.close()
-
-
-app = FastAPI(title="Library API", lifespan=lifespan)
-
-app.include_router(books_router)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=False)

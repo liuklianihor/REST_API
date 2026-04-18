@@ -1,64 +1,60 @@
 from __future__ import annotations
 
-from typing import Generator
-import pytest
 from bson import ObjectId
-from fastapi.testclient import TestClient
+import pytest
 
-from app.api.books import get_book_service
+from app import create_app
 from app.models.book_model import BookDocument
-from app.schemas.book_schema import BookCreate, BookStatus
-from main import app
 
 
-class InMemoryBookService:
+class AsyncInMemoryBookRepository:
     def __init__(self):
-        self.books: list[BookDocument] = []
+        self._books: dict[str, BookDocument] = {}
+        self._counter = 1
 
-    async def list_books(self, *, limit: int, offset: int, author=None, status=None, sort_by=None):
-        items = self.books
+    async def list_books(self, *, limit, offset, author=None, status=None, sort_by=None):
+        books = list(self._books.values())
 
-        if author:
-            items = [book for book in items if book.author == author]
-        if status:
-            items = [book for book in items if book.status == status]
+        if author is not None:
+            books = [book for book in books if book.author == author]
+
+        if status is not None:
+            books = [book for book in books if book.status == status]
 
         if sort_by == "title":
-            items = sorted(items, key=lambda book: book.title)
+            books.sort(key=lambda book: book.title)
         elif sort_by == "year":
-            items = sorted(items, key=lambda book: book.year)
-        else:
-            items = sorted(items, key=lambda book: str(book.id))
+            books.sort(key=lambda book: book.year)
 
-        return items[offset : offset + limit]
+        return books[offset:offset + limit]
 
-    async def get_book(self, book_id):
-        for book in self.books:
-            if book.id == book_id:
-                return book
-        return None
+    async def get_book_by_id(self, book_id):
+        return self._books.get(book_id)
 
-    async def create_book(self, book_data: BookCreate):
-        book = BookDocument(id=ObjectId(), **book_data.model_dump())
-        self.books.append(book)
+    async def create_book(self, book_data):
+        book_id = ObjectId()
+        book = BookDocument(
+            id=book_id,
+            title=book_data.title,
+            author=book_data.author,
+            description=book_data.description,
+            status=book_data.status,
+            year=book_data.year,
+        )
+        self._books[str(book_id)] = book
         return book
 
     async def delete_book(self, book_id):
-        self.books = [book for book in self.books if book.id != book_id]
-        return True
+        return self._books.pop(book_id, None) is not None
 
 
 @pytest.fixture()
-def fake_service() -> InMemoryBookService:
-    return InMemoryBookService()
+def app():
+    repository = AsyncInMemoryBookRepository()
+    app = create_app({"TESTING": True}, repository=repository)
+    return app
 
 
 @pytest.fixture()
-def client(fake_service: InMemoryBookService) -> Generator[TestClient, None, None]:
-    def override_get_book_service():
-        return fake_service
-
-    app.dependency_overrides[get_book_service] = override_get_book_service
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
+def client(app):
+    return app.test_client()

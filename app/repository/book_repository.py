@@ -1,17 +1,24 @@
 from __future__ import annotations
 
+import inspect
 from typing import Optional
+from uuid import uuid4
 
-from pydantic_mongo import PydanticObjectId
-from motor.motor_asyncio import AsyncIOMotorCollection
+from bson import ObjectId
 from pymongo import ASCENDING
 
 from app.models.book_model import BookDocument
 from app.schemas.book_schema import BookCreate, BookStatus
 
 
+async def _maybe_await(value):
+    if inspect.isawaitable(value):
+        return await value
+    return value
+
+
 class MongoBookRepository:
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection):
         self.collection = collection
 
     async def list_books(
@@ -35,27 +42,35 @@ class MongoBookRepository:
         elif sort_by == "year":
             sort_field = "year"
 
-        cursor = (
-            self.collection.find(query)
-            .sort(sort_field, ASCENDING)
-            .skip(offset)
-            .limit(limit)
-        )
-        documents = await cursor.to_list(length=limit)
-        return [BookDocument.from_mongo(document) for document in documents if document is not None]
+        cursor = self.collection.find(query).sort(sort_field, ASCENDING).skip(offset).limit(limit)
 
-    async def get_book_by_id(self, book_id: PydanticObjectId) -> BookDocument | None:
-        document = await self.collection.find_one({"_id": book_id})
+        if hasattr(cursor, "to_list"):
+            documents = await _maybe_await(cursor.to_list(length=limit))
+        else:
+            documents = list(cursor)
+
+        return [
+            book
+            for book in (BookDocument.from_mongo(document) for document in documents)
+            if book is not None
+        ]
+
+    async def get_book_by_id(self, book_id: str) -> BookDocument | None:
+        if not ObjectId.is_valid(book_id):
+            return None
+        document = await _maybe_await(self.collection.find_one({"_id": ObjectId(book_id)}))
         return BookDocument.from_mongo(document)
 
     async def create_book(self, book_data: BookCreate) -> BookDocument:
-        payload = book_data.model_dump(mode="python")
-        result = await self.collection.insert_one(payload)
-        document = await self.collection.find_one({"_id": result.inserted_id})
+        payload = book_data.model_dump(mode="json")
+        result = await _maybe_await(self.collection.insert_one(payload))
+        document = await _maybe_await(self.collection.find_one({"_id": result.inserted_id}))
         if document is None:
             return BookDocument(id=result.inserted_id, **book_data.model_dump())
         return BookDocument.from_mongo(document)
 
-    async def delete_book(self, book_id: PydanticObjectId) -> bool:
-        result = await self.collection.delete_one({"_id": book_id})
+    async def delete_book(self, book_id: str) -> bool:
+        if not ObjectId.is_valid(book_id):
+            return False
+        result = await _maybe_await(self.collection.delete_one({"_id": ObjectId(book_id)}))
         return result.deleted_count > 0

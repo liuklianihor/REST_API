@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 
-
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
     "mongodb://mongo_admin:password@localhost:27017/?authSource=admin",

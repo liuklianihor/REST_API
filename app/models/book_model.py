@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pydantic import ConfigDict
-from pydantic_mongo import PydanticObjectId
+from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.schemas.book_schema import BookBase
 
@@ -9,7 +9,11 @@ from app.schemas.book_schema import BookBase
 class BookDocument(BookBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    id: PydanticObjectId | None = None
+    id: ObjectId | None = Field(default=None)
+
+    @field_serializer("id")
+    def serialize_id(self, value):
+        return str(value) if value is not None else None
 
     @classmethod
     def from_mongo(cls, document: dict | None) -> "BookDocument | None":

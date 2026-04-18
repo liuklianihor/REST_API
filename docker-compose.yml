@@ -34,6 +34,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    volumes:
+      - .:/app
 
 volumes:
   mongo_data:

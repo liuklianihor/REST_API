@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from pydantic_mongo import PydanticObjectId
+import asyncio
 
-from app.models.book_model import BookDocument
-from app.repository.book_repository import MongoBookRepository
 from app.schemas.book_schema import BookCreate, BookStatus
 
 
+def _run(coro):
+    return asyncio.run(coro)
+
+
 class BookService:
-    def __init__(self, repository: MongoBookRepository):
+    def __init__(self, repository):
         self.repository = repository
 
-    async def list_books(
+    def list_books(
         self,
         *,
         limit: int,
@@ -19,20 +21,22 @@ class BookService:
         author: str | None = None,
         status: BookStatus | None = None,
         sort_by: str | None = None,
-    ) -> list[BookDocument]:
-        return await self.repository.list_books(
-            limit=limit,
-            offset=offset,
-            author=author,
-            status=status,
-            sort_by=sort_by,
+    ):
+        return _run(
+            self.repository.list_books(
+                limit=limit,
+                offset=offset,
+                author=author,
+                status=status,
+                sort_by=sort_by,
+            )
         )
 
-    async def get_book(self, book_id: PydanticObjectId) -> BookDocument | None:
-        return await self.repository.get_book_by_id(book_id)
+    def get_book(self, book_id: str):
+        return _run(self.repository.get_book_by_id(book_id))
 
-    async def create_book(self, book_data: BookCreate) -> BookDocument:
-        return await self.repository.create_book(book_data)
+    def create_book(self, book_data: BookCreate):
+        return _run(self.repository.create_book(book_data))
 
-    async def delete_book(self, book_id: PydanticObjectId) -> bool:
-        return await self.repository.delete_book(book_id)
+    def delete_book(self, book_id: str):
+        return _run(self.repository.delete_book(book_id))

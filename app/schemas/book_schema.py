@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic_mongo import PydanticObjectId
+from pydantic import BaseModel, Field
 
 
 class BookStatus(str, Enum):
@@ -24,6 +23,4 @@ class BookCreate(BookBase):
 
 
 class BookRead(BookBase):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    id: PydanticObjectId
+    id: str
