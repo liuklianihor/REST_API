@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import asc, desc, select
+from sqlalchemy import UUID, asc, desc, select
 from sqlalchemy.orm import Session
 
 from app.models.book_model import Book
 from app.schemas.book_schema import BookCreate, BookStatus
 
 
-def list_books(
+async def list_books(
     db: Session,
     *,
     limit: int,
@@ -37,11 +37,11 @@ def list_books(
     return db.execute(query).scalars().all()
 
 
-def get_book_by_id(db: Session, book_id):
+async def get_book_by_id(db: Session, book_id: UUID):
     return db.get(Book, book_id)
 
 
-def create_book(db: Session, book_data: BookCreate):
+async def create_book(db: Session, book_data: BookCreate):
     book = Book(**book_data.model_dump())
     db.add(book)
     db.commit()
@@ -49,7 +49,7 @@ def create_book(db: Session, book_data: BookCreate):
     return book
 
 
-def delete_book(db: Session, book_id):
+async def delete_book(db: Session, book_id: UUID):
     book = db.get(Book, book_id)
     if book is None:
         return False

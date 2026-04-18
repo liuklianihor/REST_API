@@ -12,7 +12,7 @@ from app.repository.book_repository import list_books as repo_list_books
 from app.schemas.book_schema import BookCreate, BookStatus
 
 
-def list_books(
+async def list_books(
     db: Session,
     *,
     limit: int,
@@ -21,7 +21,7 @@ def list_books(
     status: Optional[BookStatus] = None,
     sort_by: Optional[str] = None,
 ):
-    return repo_list_books(
+    return await repo_list_books(
         db,
         limit=limit,
         offset=offset,
@@ -31,13 +31,13 @@ def list_books(
     )
 
 
-def fetch_book(db: Session, book_id: UUID):
-    return repo_get_book_by_id(db, book_id)
+async def fetch_book(db: Session, book_id: UUID):
+    return await repo_get_book_by_id(db, book_id)
 
 
-def persist_book(db: Session, book_data: BookCreate):
-    return repo_create_book(db, book_data)
+async def persist_book(db: Session, book_data: BookCreate):
+    return await repo_create_book(db, book_data)
 
 
-def erase_book(db: Session, book_id: UUID):
-    return repo_delete_book(db, book_id)
+async def erase_book(db: Session, book_id: UUID):
+    return await repo_delete_book(db, book_id)
