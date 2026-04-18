@@ -26,7 +26,7 @@ def _decode_cursor(cursor: str) -> dict[str, object]:
     return data
 
 
-def list_books(
+async def list_books(
     db: Session,
     *,
     limit: int,
@@ -91,11 +91,11 @@ def list_books(
     return BookPage(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
-def get_book_by_id(db: Session, book_id):
+async def get_book_by_id(db: Session, book_id: UUID):
     return db.get(Book, book_id)
 
 
-def create_book(db: Session, book_data: BookCreate):
+async def create_book(db: Session, book_data: BookCreate):
     book = Book(**book_data.model_dump())
     db.add(book)
     db.commit()
@@ -103,7 +103,7 @@ def create_book(db: Session, book_data: BookCreate):
     return book
 
 
-def delete_book(db: Session, book_id):
+async def delete_book(db: Session, book_id: UUID):
     book = db.get(Book, book_id)
     if book is None:
         return False
