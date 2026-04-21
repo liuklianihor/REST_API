@@ -25,5 +25,4 @@ class BookCreate(BookBase):
 
 class BookRead(BookBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
     id: PydanticObjectId

@@ -8,7 +8,6 @@ from app.schemas.book_schema import BookBase
 
 class BookDocument(BookBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
     id: PydanticObjectId | None = None
 
     @classmethod
