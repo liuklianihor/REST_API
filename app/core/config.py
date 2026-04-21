@@ -16,3 +16,5 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "
 
 API_USERNAME = os.getenv("API_USERNAME", "admin")
 API_PASSWORD = os.getenv("API_PASSWORD", "password")
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")

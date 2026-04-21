@@ -1,12 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.core.rate_limiter import rate_limit_anonymous
 from app.core.security import authenticate_user, build_token_pair, decode_token
-from app.schemas.auth_schema import LoginRequest, RefreshRequest, TokenPair
+from app.schemas.auth_schema import RefreshRequest, TokenPair
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"],
+    dependencies=[Depends(rate_limit_anonymous)],
+)
+
 
 @router.post("/token", response_model=TokenPair)
 async def login(credentials: OAuth2PasswordRequestForm = Depends()) -> TokenPair:

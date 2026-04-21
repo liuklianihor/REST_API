@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic_mongo import PydanticObjectId
 
 from app.core.database import get_book_collection
-from app.core.security import get_current_user
+from app.core.rate_limiter import rate_limit_authenticated
 from app.models.book_model import BookDocument
 from app.repository.book_repository import MongoBookRepository
 from app.schemas.book_schema import BookCreate, BookRead, BookStatus
@@ -14,7 +14,7 @@ from app.services.book_service import BookService
 router = APIRouter(
     prefix="/books",
     tags=["Books"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(rate_limit_authenticated)],
 )
 
 
