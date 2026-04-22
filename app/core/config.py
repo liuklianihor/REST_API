@@ -18,3 +18,10 @@ API_USERNAME = os.getenv("API_USERNAME", "admin")
 API_PASSWORD = os.getenv("API_PASSWORD", "password")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+
+RATE_LIMITER_ENABLED = os.getenv("RATE_LIMITER_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}

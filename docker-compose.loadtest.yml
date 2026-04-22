@@ -1,0 +1,25 @@
+services:
+  api:
+    environment:
+      RATE_LIMITER_ENABLED: "false"
+
+  locust:
+    image: locustio/locust:2.31.1
+    container_name: library_locust
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./locust/locustfile.py:/mnt/locust/locustfile.py:ro
+    command:
+      - -f
+      - /mnt/locust/locustfile.py
+      - --host
+      - http://api:8000
+      - --headless
+      - -u
+      - "${LOCUST_USERS:-20}"
+      - -r
+      - "${LOCUST_SPAWN_RATE:-5}"
+      - -t
+      - "${LOCUST_RUN_TIME:-1m}"
