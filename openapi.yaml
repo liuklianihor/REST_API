@@ -1,0 +1,284 @@
+openapi: 3.0.3
+info:
+  title: Library API
+  version: 1.0.0
+  description: Mock specification for the Library API project.
+servers:
+  - url: http://localhost:4010
+tags:
+  - name: Auth
+  - name: Books
+paths:
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Obtain access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 1
+                  example: admin
+                password:
+                  type: string
+                  minLength: 1
+                  example: password
+      responses:
+        "200":
+          description: Tokens issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.access
+                refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.refresh
+                token_type: bearer
+        "401":
+          description: Incorrect username or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Incorrect username or password
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+            example:
+              refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.refresh
+      responses:
+        "200":
+          description: Refreshed token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.new.access
+                refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.new.refresh
+                token_type: bearer
+        "401":
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid token
+  /books:
+    get:
+      tags: [Books]
+      summary: List books
+      parameters:
+        - in: query
+          name: author
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/BookStatus"
+          required: false
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [title, year]
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          required: false
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          required: false
+      responses:
+        "200":
+          description: A list of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookRead"
+              example:
+                - id: 66f7b61b3e5c5f72e8f00001
+                  title: Clean Code
+                  author: Robert C. Martin
+                  description: A handbook of agile software craftsmanship.
+                  status: available
+                  year: 2008
+                - id: 66f7b61b3e5c5f72e8f00002
+                  title: The Pragmatic Programmer
+                  author: Andrew Hunt
+                  description: Classic guide to pragmatic software development.
+                  status: borrowed
+                  year: 1999
+    post:
+      tags: [Books]
+      summary: Create a new book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookCreate"
+            example:
+              title: Clean Architecture
+              author: Robert C. Martin
+              description: A guide to building maintainable software.
+              status: available
+              year: 2017
+      responses:
+        "201":
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookRead"
+              example:
+                id: 66f7b61b3e5c5f72e8f00003
+                title: Clean Architecture
+                author: Robert C. Martin
+                description: A guide to building maintainable software.
+                status: available
+                year: 2017
+  /books/{book_id}:
+    get:
+      tags: [Books]
+      summary: Get a single book by ID
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema:
+            type: string
+          example: 66f7b61b3e5c5f72e8f00001
+      responses:
+        "200":
+          description: Book found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookRead"
+              example:
+                id: 66f7b61b3e5c5f72e8f00001
+                title: Clean Code
+                author: Robert C. Martin
+                description: A handbook of agile software craftsmanship.
+                status: available
+                year: 2008
+        "404":
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Book not found
+    delete:
+      tags: [Books]
+      summary: Delete a book
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema:
+            type: string
+          example: 66f7b61b3e5c5f72e8f00001
+      responses:
+        "204":
+          description: Book deleted
+        "404":
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Book not found
+components:
+  schemas:
+    BookStatus:
+      type: string
+      enum: [available, borrowed]
+    BookBase:
+      type: object
+      required: [title, author, description, status, year]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        author:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/BookStatus"
+        year:
+          type: integer
+          minimum: 0
+          maximum: 3000
+    BookCreate:
+      allOf:
+        - $ref: "#/components/schemas/BookBase"
+    BookRead:
+      allOf:
+        - $ref: "#/components/schemas/BookBase"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              description: MongoDB object id as a string
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token, token_type]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string

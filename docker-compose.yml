@@ -49,6 +49,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+  
+  prism:
+    image: stoplight/prism:4
+    container_name: library_api_mock
+    command: mock /tmp/openapi.yaml --host 0.0.0.0 --port 4010
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./openapi.yaml:/tmp/openapi.yaml:ro
 
 volumes:
   mongo_data:
