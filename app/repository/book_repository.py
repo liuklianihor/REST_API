@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic_mongo import PydanticObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import ASCENDING
 
@@ -13,6 +12,21 @@ from app.schemas.book_schema import BookCreate, BookStatus
 class MongoBookRepository:
     def __init__(self, collection: AsyncIOMotorCollection):
         self.collection = collection
+
+    async def count_books(
+        self,
+        *,
+        author: Optional[str] = None,
+        status: Optional[BookStatus] = None,
+        sort_by: Optional[str] = None,
+    ) -> int:
+        query: dict = {}
+        if author:
+            query["author"] = author
+        if status:
+            query["status"] = status.value
+
+        return await self.collection.count_documents(query)
 
     async def list_books(
         self,
@@ -41,10 +55,11 @@ class MongoBookRepository:
             .skip(offset)
             .limit(limit)
         )
+
         documents = await cursor.to_list(length=limit)
         return [BookDocument.from_mongo(document) for document in documents if document is not None]
 
-    async def get_book_by_id(self, book_id: PydanticObjectId) -> BookDocument | None:
+    async def get_book_by_id(self, book_id) -> BookDocument | None:
         document = await self.collection.find_one({"_id": book_id})
         return BookDocument.from_mongo(document)
 
@@ -52,10 +67,12 @@ class MongoBookRepository:
         payload = book_data.model_dump(mode="python")
         result = await self.collection.insert_one(payload)
         document = await self.collection.find_one({"_id": result.inserted_id})
+
         if document is None:
             return BookDocument(id=result.inserted_id, **book_data.model_dump())
+
         return BookDocument.from_mongo(document)
 
-    async def delete_book(self, book_id: PydanticObjectId) -> bool:
+    async def delete_book(self, book_id) -> bool:
         result = await self.collection.delete_one({"_id": book_id})
         return result.deleted_count > 0

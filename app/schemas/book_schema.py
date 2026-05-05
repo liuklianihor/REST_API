@@ -25,4 +25,21 @@ class BookCreate(BookBase):
 
 class BookRead(BookBase):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: PydanticObjectId
+
+
+class PaginationInfo(BaseModel):
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0)
+    count: int = Field(ge=0)
+    total: int = Field(ge=0)
+    has_more: bool = False
+    has_prev: bool = False
+    next_offset: int | None = None
+    prev_offset: int | None = None
+
+
+class BookPage(BaseModel):
+    items: list[BookRead]
+    pagination: PaginationInfo

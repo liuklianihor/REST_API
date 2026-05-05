@@ -6,9 +6,8 @@ from pydantic_mongo import PydanticObjectId
 
 from app.core.database import get_book_collection
 from app.core.security import get_current_user
-from app.models.book_model import BookDocument
 from app.repository.book_repository import MongoBookRepository
-from app.schemas.book_schema import BookCreate, BookRead, BookStatus
+from app.schemas.book_schema import BookCreate, BookPage, BookRead, BookStatus
 from app.services.book_service import BookService
 
 router = APIRouter(
@@ -30,7 +29,7 @@ def get_book_service(
     return BookService(repository)
 
 
-@router.get("", response_model=list[BookRead])
+@router.get("", response_model=BookPage)
 async def read_books(
     author: str | None = Query(default=None),
     status: BookStatus | None = Query(default=None),

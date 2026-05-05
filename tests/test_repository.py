@@ -35,13 +35,47 @@ class FakeCursor:
 
 
 @pytest.mark.asyncio
+async def test_repository_count_books_builds_mongo_query():
+    collection = SimpleNamespace()
+    collection.count_documents = AsyncMock(return_value=3)
+
+    repo = MongoBookRepository(collection)
+
+    total = await repo.count_books(
+        author="Alice",
+        status=BookStatus.available,
+        sort_by="title",
+    )
+
+    collection.count_documents.assert_called_once_with({"author": "Alice", "status": "available"})
+    assert total == 3
+
+
+@pytest.mark.asyncio
 async def test_repository_builds_mongo_query():
     collection = SimpleNamespace()
-    cursor = FakeCursor([{"_id": ObjectId(), "title": "A", "author": "Alice", "description": "D", "status": "available", "year": 2024}])
+    cursor = FakeCursor(
+        [
+            {
+                "_id": ObjectId(),
+                "title": "A",
+                "author": "Alice",
+                "description": "D",
+                "status": "available",
+                "year": 2024,
+            }
+        ]
+    )
     collection.find = MagicMock(return_value=cursor)
 
     repo = MongoBookRepository(collection)
-    books = await repo.list_books(limit=10, offset=0, author="Alice", status=BookStatus.available, sort_by="title")
+    books = await repo.list_books(
+        limit=10,
+        offset=0,
+        author="Alice",
+        status=BookStatus.available,
+        sort_by="title",
+    )
 
     collection.find.assert_called_once_with({"author": "Alice", "status": "available"})
     assert cursor.sort_args[0] == "title"
@@ -53,25 +87,29 @@ async def test_repository_create_and_delete():
     inserted_id = ObjectId()
     collection = SimpleNamespace(
         insert_one=AsyncMock(return_value=SimpleNamespace(inserted_id=inserted_id)),
-        find_one=AsyncMock(return_value={
-            "_id": inserted_id,
-            "title": "Book",
-            "author": "Author",
-            "description": "Desc",
-            "status": "available",
-            "year": 2024,
-        }),
+        find_one=AsyncMock(
+            return_value={
+                "_id": inserted_id,
+                "title": "Book",
+                "author": "Author",
+                "description": "Desc",
+                "status": "available",
+                "year": 2024,
+            }
+        ),
         delete_one=AsyncMock(return_value=SimpleNamespace(deleted_count=1)),
     )
 
     repo = MongoBookRepository(collection)
-    created = await repo.create_book(BookCreate(
-        title="Book",
-        author="Author",
-        description="Desc",
-        status=BookStatus.available,
-        year=2024,
-    ))
+    created = await repo.create_book(
+        BookCreate(
+            title="Book",
+            author="Author",
+            description="Desc",
+            status=BookStatus.available,
+            year=2024,
+        )
+    )
     assert created.id == inserted_id
 
     deleted = await repo.delete_book(inserted_id)

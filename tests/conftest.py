@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.api.auth import router as auth_router
 from app.api.books import get_book_service
 from app.models.book_model import BookDocument
-from app.schemas.book_schema import BookCreate, BookStatus
+from app.schemas.book_schema import BookCreate, BookPage, BookRead, BookStatus, PaginationInfo
 from main import app
 
 
@@ -19,17 +19,35 @@ class InMemoryBookService:
 
     async def list_books(self, *, limit, offset, author=None, status=None, sort_by=None):
         items = self.books
+
         if author:
             items = [book for book in items if book.author == author]
         if status:
             items = [book for book in items if book.status == status]
+
         if sort_by == "title":
             items = sorted(items, key=lambda book: book.title)
         elif sort_by == "year":
             items = sorted(items, key=lambda book: book.year)
         else:
             items = sorted(items, key=lambda book: str(book.id))
-        return items[offset : offset + limit]
+
+        total = len(items)
+        page_items = items[offset : offset + limit]
+
+        return BookPage(
+            items=[BookRead.model_validate(book.model_dump(mode="python")) for book in page_items],
+            pagination=PaginationInfo(
+                limit=limit,
+                offset=offset,
+                count=len(page_items),
+                total=total,
+                has_more=offset + len(page_items) < total,
+                has_prev=offset > 0,
+                next_offset=(offset + limit) if offset + len(page_items) < total else None,
+                prev_offset=max(offset - limit, 0) if offset > 0 else None,
+            ),
+        )
 
     async def get_book(self, book_id):
         for book in self.books:
@@ -58,6 +76,7 @@ def client(fake_service: InMemoryBookService) -> Generator[TestClient, None, Non
         return fake_service
 
     app.dependency_overrides[get_book_service] = override_get_book_service
+
     with TestClient(app) as test_client:
         login_response = test_client.post(
             "/auth/token",
@@ -68,4 +87,5 @@ def client(fake_service: InMemoryBookService) -> Generator[TestClient, None, Non
         token = login_response.json()["access_token"]
         test_client.headers.update({"Authorization": f"Bearer {token}"})
         yield test_client
+
     app.dependency_overrides.clear()
