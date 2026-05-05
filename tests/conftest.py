@@ -12,12 +12,21 @@ class AsyncInMemoryBookRepository:
         self._books: dict[str, BookDocument] = {}
         self._counter = 1
 
+    async def count_books(self, *, author=None, status=None, sort_by=None):
+        books = list(self._books.values())
+
+        if author is not None:
+            books = [book for book in books if book.author == author]
+        if status is not None:
+            books = [book for book in books if book.status == status]
+
+        return len(books)
+
     async def list_books(self, *, limit, offset, author=None, status=None, sort_by=None):
         books = list(self._books.values())
 
         if author is not None:
             books = [book for book in books if book.author == author]
-
         if status is not None:
             books = [book for book in books if book.status == status]
 

@@ -11,8 +11,8 @@ def _service():
     return current_app.extensions["book_service"]
 
 
-def _serialize(book):
-    return book.model_dump(mode="json")
+def _serialize(payload):
+    return payload.model_dump(mode="json")
 
 
 def _parse_filters():
@@ -47,14 +47,14 @@ def _parse_filters():
 class BookListResource(Resource):
     def get(self):
         author, status, sort_by, limit, offset = _parse_filters()
-        books = _service().list_books(
+        page = _service().list_books(
             limit=limit,
             offset=offset,
             author=author,
             status=status,
             sort_by=sort_by,
         )
-        return [_serialize(book) for book in books], 200
+        return _serialize(page), 200
 
     def post(self):
         payload = request.get_json(silent=True) or {}
