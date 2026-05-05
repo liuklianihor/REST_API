@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic_mongo import PydanticObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
+from pydantic_mongo import PydanticObjectId
 from pymongo import ASCENDING
 
 from app.models.book_model import BookDocument
@@ -13,6 +13,20 @@ from app.schemas.book_schema import BookCreate, BookStatus
 class MongoBookRepository:
     def __init__(self, collection: AsyncIOMotorCollection):
         self.collection = collection
+
+    async def count_books(
+        self,
+        *,
+        author: Optional[str] = None,
+        status: Optional[BookStatus] = None,
+        sort_by: Optional[str] = None,
+    ) -> int:
+        query: dict = {}
+        if author:
+            query["author"] = author
+        if status:
+            query["status"] = status.value
+        return await self.collection.count_documents(query)
 
     async def list_books(
         self,

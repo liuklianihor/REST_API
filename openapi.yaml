@@ -3,11 +3,14 @@ info:
   title: Library API
   version: 1.0.0
   description: Mock specification for the Library API project.
+
 servers:
   - url: http://localhost:4010
+
 tags:
   - name: Auth
   - name: Books
+
 paths:
   /auth/token:
     post:
@@ -48,6 +51,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: Incorrect username or password
+
   /auth/refresh:
     post:
       tags: [Auth]
@@ -79,6 +83,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: Invalid token
+
   /books:
     get:
       tags: [Books]
@@ -117,26 +122,35 @@ paths:
           required: false
       responses:
         "200":
-          description: A list of books
+          description: A paged list of books
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/BookRead"
+                $ref: "#/components/schemas/BookPage"
               example:
-                - id: 66f7b61b3e5c5f72e8f00001
-                  title: Clean Code
-                  author: Robert C. Martin
-                  description: A handbook of agile software craftsmanship.
-                  status: available
-                  year: 2008
-                - id: 66f7b61b3e5c5f72e8f00002
-                  title: The Pragmatic Programmer
-                  author: Andrew Hunt
-                  description: Classic guide to pragmatic software development.
-                  status: borrowed
-                  year: 1999
+                items:
+                  - id: 66f7b61b3e5c5f72e8f00001
+                    title: Clean Code
+                    author: Robert C. Martin
+                    description: A handbook of agile software craftsmanship.
+                    status: available
+                    year: 2008
+                  - id: 66f7b61b3e5c5f72e8f00002
+                    title: The Pragmatic Programmer
+                    author: Andrew Hunt
+                    description: Classic guide to pragmatic software development.
+                    status: borrowed
+                    year: 1999
+                pagination:
+                  limit: 10
+                  offset: 0
+                  count: 2
+                  total: 2
+                  has_more: false
+                  has_prev: false
+                  next_offset: null
+                  prev_offset: null
+
     post:
       tags: [Books]
       summary: Create a new book
@@ -166,6 +180,7 @@ paths:
                 description: A guide to building maintainable software.
                 status: available
                 year: 2017
+
   /books/{book_id}:
     get:
       tags: [Books]
@@ -199,6 +214,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: Book not found
+
     delete:
       tags: [Books]
       summary: Delete a book
@@ -220,11 +236,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: Book not found
+
 components:
   schemas:
     BookStatus:
       type: string
       enum: [available, borrowed]
+
     BookBase:
       type: object
       required: [title, author, description, status, year]
@@ -247,9 +265,11 @@ components:
           type: integer
           minimum: 0
           maximum: 3000
+
     BookCreate:
       allOf:
         - $ref: "#/components/schemas/BookBase"
+
     BookRead:
       allOf:
         - $ref: "#/components/schemas/BookBase"
@@ -259,6 +279,48 @@ components:
             id:
               type: string
               description: MongoDB object id as a string
+
+    PaginationInfo:
+      type: object
+      required: [limit, offset, count, total, has_more, has_prev]
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        count:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        has_more:
+          type: boolean
+        has_prev:
+          type: boolean
+        next_offset:
+          type: integer
+          minimum: 0
+          nullable: true
+        prev_offset:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    BookPage:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookRead"
+        pagination:
+          $ref: "#/components/schemas/PaginationInfo"
+
     TokenPair:
       type: object
       required: [access_token, refresh_token, token_type]
@@ -270,6 +332,7 @@ components:
         token_type:
           type: string
           default: bearer
+
     RefreshRequest:
       type: object
       required: [refresh_token]
@@ -277,6 +340,7 @@ components:
         refresh_token:
           type: string
           minLength: 1
+
     ErrorResponse:
       type: object
       properties:
