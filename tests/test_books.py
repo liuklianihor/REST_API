@@ -29,8 +29,16 @@ def test_get_books(client):
     client.post("/books/", json=build_book())
     response = client.get("/books/")
     assert response.status_code == 200
-    assert isinstance(response.json, list)
-    assert len(response.json) == 1
+
+    data = response.json
+    assert isinstance(data, dict)
+    assert "items" in data
+    assert "pagination" in data
+    assert isinstance(data["items"], list)
+    assert len(data["items"]) == 1
+    assert data["pagination"]["limit"] == 10
+    assert data["pagination"]["offset"] == 0
+    assert data["pagination"]["count"] == 1
 
 
 def test_get_book_by_id(client):
@@ -46,33 +54,45 @@ def test_get_book_by_id(client):
 def test_filter_by_author(client):
     client.post("/books/", json=build_book(author="Alice"))
     client.post("/books/", json=build_book(title="Other", author="Bob"))
+
     response = client.get("/books/?author=Alice")
     assert response.status_code == 200
-    data = response.json
-    assert len(data) == 1
-    assert data[0]["author"] == "Alice"
 
+    data = response.json
+    items = data["items"]
+    assert len(items) == 1
+    assert items[0]["author"] == "Alice"
 
 def test_sort_by_title(client):
     client.post("/books/", json=build_book(title="Z Book"))
     client.post("/books/", json=build_book(title="A Book"))
+
     response = client.get("/books/?sort_by=title")
     assert response.status_code == 200
+
     data = response.json
-    assert data[0]["title"] == "A Book"
-    assert data[1]["title"] == "Z Book"
+    items = data["items"]
+    assert items[0]["title"] == "A Book"
 
 
 def test_limit_offset_pagination(client):
     client.post("/books/", json=build_book(title="Book 1"))
     client.post("/books/", json=build_book(title="Book 2"))
     client.post("/books/", json=build_book(title="Book 3"))
+
     response = client.get("/books/?limit=2&offset=1&sort_by=title")
     assert response.status_code == 200
+
     data = response.json
-    assert len(data) == 2
-    assert data[0]["title"] == "Book 2"
-    assert data[1]["title"] == "Book 3"
+    items = data["items"]
+    pagination = data["pagination"]
+
+    assert len(items) == 2
+    assert items[0]["title"] == "Book 2"
+    assert items[1]["title"] == "Book 3"
+    assert pagination["limit"] == 2
+    assert pagination["offset"] == 1
+    assert pagination["count"] == 2
 
 
 def test_delete_book_is_idempotent(client):
